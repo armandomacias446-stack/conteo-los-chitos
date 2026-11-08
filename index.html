@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F5F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15140F" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Hoja de conteo de inventario de Los Chitos: existencias por proveedor y pedido listo para WhatsApp.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Conteo Chitos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=&apos;http://www.w3.org/2000/svg&apos; viewBox=&apos;0 0 64 64&apos;%3E%3Crect width=&apos;64&apos; height=&apos;64&apos; rx=&apos;12&apos; fill=&apos;%23A3302A&apos;/%3E%3Cg stroke=&apos;%23fff&apos; stroke-width=&apos;5&apos; stroke-linecap=&apos;round&apos;%3E%3Cpath d=&apos;M18 24h28M18 34h28M18 44h18&apos;/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{ color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body{ margin:0; font:14px system-ui, -apple-system, sans-serif; }
+img{ max-width:100%; }
+[hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<title>Conteo Los Chitos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* Layout: hoja de conteo vertical para teléfono — encabezado fijo con avance,
+   secciones por proveedor plegables, barra de acción abajo, salida tipo ticket 80 mm. */
+:root{
+  --paper:#F6F5F1; --surface:#FFFFFF; --surface-2:#EFEDE7;
+  --ink:#1C1A16; --ink-soft:#6B675C; --line:#D9D5CA;
+  --accent:#A3302A; --accent-ink:#FFFFFF;
+  --ok:#2F6B4F; --ok-ink:#FFFFFF; --warn:#9A6A12;
+  --font-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-body:"Barlow","Helvetica Neue",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Courier New",monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15140F; --surface:#1E1C16; --surface-2:#262319;
+    --ink:#F2F0E9; --ink-soft:#9B968A; --line:#352F24;
+    --accent:#E2655C; --accent-ink:#1A0E0D;
+    --ok:#5FB287; --ok-ink:#0E2219; --warn:#D9A447;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15140F; --surface:#1E1C16; --surface-2:#262319;
+  --ink:#F2F0E9; --ink-soft:#9B968A; --line:#352F24;
+  --accent:#E2655C; --accent-ink:#1A0E0D;
+  --ok:#5FB287; --ok-ink:#0E2219; --warn:#D9A447;
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:16px; line-height:1.45;
+  -webkit-text-size-adjust:100%;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* ---------- Encabezado ---------- */
+.bar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:20;
+  background:var(--surface); border-bottom:1px solid var(--line);
+  padding-block:10px 0;
+}
+.bar-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1{
+  font-family:var(--font-display); font-weight:700; font-size:1.45rem;
+  letter-spacing:.01em; text-transform:uppercase; margin:0; min-width:0;
+}
+h1 span{color:var(--accent)}
+.modes{display:flex;gap:4px;margin-left:auto;background:var(--surface-2);border-radius:999px;padding:3px}
+.modes button{
+  font:600 .72rem/1 var(--font-body); letter-spacing:.06em; text-transform:uppercase;
+  border:0;background:transparent;color:var(--ink-soft);
+  padding:7px 11px;border-radius:999px;cursor:pointer;
+}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.meta label{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 110px}
+.meta span{font:600 .62rem/1 var(--font-body);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft)}
+.meta input,.meta select{
+  font:500 .92rem var(--font-body); color:var(--ink);
+  background:var(--paper); border:1px solid var(--line); border-radius:8px;
+  padding:7px 8px; width:100%; min-width:0;
+}
+
+.progress{margin-top:10px;padding-bottom:9px}
+.track{height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.fill{height:100%;width:0;background:var(--ok);transition:width .2s ease}
+.pstat{
+  display:flex;justify-content:space-between;gap:8px;margin-top:5px;
+  font:500 .72rem var(--font-mono); color:var(--ink-soft); font-variant-numeric:tabular-nums;
+}
+.pstat b{color:var(--accent);font-weight:600}
+
+/* ---------- Herramientas ---------- */
+.tools{display:flex;gap:8px;margin-top:14px;align-items:center}
+#buscar{
+  flex:1 1 auto;min-width:0;font:500 .95rem var(--font-body);color:var(--ink);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:9px 14px;
+}
+.tbtn{
+  flex:0 0 auto;font:600 .72rem/1 var(--font-body);letter-spacing:.05em;text-transform:uppercase;
+  background:var(--surface);color:var(--ink-soft);border:1px solid var(--line);
+  border-radius:999px;padding:9px 12px;cursor:pointer;
+}
+.hint{
+  margin:12px 0 0; padding:10px 12px; border-left:3px solid var(--accent);
+  background:var(--surface); border-radius:0 var(--r) var(--r) 0;
+  font-size:.85rem; color:var(--ink-soft);
+}
+.hint b{color:var(--ink)}
+
+/* ---------- Secciones por proveedor ---------- */
+main{padding-bottom:100px}
+.prov{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.phead{
+  display:flex;align-items:center;gap:9px;width:100%;
+  background:transparent;border:0;cursor:pointer;text-align:left;
+  padding:12px 13px; color:var(--ink);
+}
+.phead h2{
+  font-family:var(--font-display);font-weight:600;font-size:1.08rem;
+  text-transform:uppercase;letter-spacing:.03em;margin:0;flex:1 1 auto;min-width:0;
+}
+.tag{
+  font:600 .6rem/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 6px;border-radius:4px;flex:0 0 auto;
+}
+.tag.directa{background:var(--surface-2);color:var(--ink-soft)}
+.tag.pedido{background:var(--accent);color:var(--accent-ink)}
+.cnt{font:600 .75rem var(--font-mono);color:var(--ink-soft);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.cnt.has{color:var(--ok)}
+.caret{flex:0 0 auto;width:10px;height:10px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(45deg);transition:transform .18s ease;margin:0 2px}
+.prov.open .caret{transform:rotate(-135deg)}
+.rows{display:none;border-top:1px solid var(--line)}
+.prov.open .rows{display:block}
+
+.row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row.bajo{background:color-mix(in srgb, var(--accent) 7%, transparent)}
+.nm{flex:1 1 auto;min-width:0}
+.nm .t{font-weight:500;font-size:.95rem;overflow-wrap:anywhere}
+.nm .s{font:500 .68rem var(--font-mono);color:var(--ink-soft);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.nm .s em{font-style:normal;color:var(--accent);font-weight:600}
+.flds{display:flex;gap:7px;flex:0 0 auto}
+.fld{display:flex;flex-direction:column;align-items:center;gap:2px}
+.fld span{font:600 .55rem/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.flds input{
+  width:58px;text-align:center;font:600 1rem var(--font-mono);font-variant-numeric:tabular-nums;
+  color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 2px;
+}
+.flds input::-webkit-outer-spin-button,.flds input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.flds input[type=number]{-moz-appearance:textfield}
+.flds input.pedir{border-color:var(--accent);color:var(--accent);font-weight:600}
+.flds input.pedir:placeholder-shown{border-color:var(--line);color:var(--ink)}
+.flds input.u{width:62px;font:500 .8rem var(--font-body);text-align:center}
+
+body.cfg .cnt-f{display:none}
+body:not(.cfg) .cfg-f{display:none}
+
+/* ---------- Barra de acción ---------- */
+.actions{
+  position:fixed;left:0;right:0;bottom:0;z-index:25;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding-top:10px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;gap:8px;
+}
+.btn{
+  font:600 .84rem/1 var(--font-body);letter-spacing:.04em;text-transform:uppercase;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  border-radius:9px;padding:14px 14px;cursor:pointer;flex:0 0 auto;
+}
+.btn.main{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 auto}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* ---------- Ticket ---------- */
+.sheet{
+  position:fixed;inset:0;z-index:40;background:var(--paper);overflow-y:auto;
+  padding-top:calc(14px + env(safe-area-inset-top,0px));
+  padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+}
+.sheet-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sheet-top h2{font-family:var(--font-display);font-weight:700;font-size:1.3rem;text-transform:uppercase;margin:0;flex:1 1 auto}
+.ticket{
+  background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  max-width:420px;margin:0 auto;padding:16px 14px;
+  font:500 .82rem/1.6 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+}
+.copies{max-width:420px;margin:12px auto 0;display:flex;flex-direction:column;gap:7px}
+.copyrow{display:flex;gap:7px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 11px}
+.copyrow .n{flex:1 1 auto;min-width:0;font:600 .8rem var(--font-body);text-transform:uppercase;letter-spacing:.03em;overflow-wrap:anywhere}
+.copyrow .q{font:600 .72rem var(--font-mono);color:var(--ink-soft);flex:0 0 auto}
+.mini{font:600 .68rem/1 var(--font-body);letter-spacing:.05em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:8px 10px;cursor:pointer;flex:0 0 auto}
+.mini.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
+.opts{max-width:420px;margin:0 auto 14px;display:flex;gap:14px;flex-wrap:wrap;font-size:.84rem;color:var(--ink-soft)}
+.opts label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.opts .wa input{width:116px;font:600 .82rem var(--font-mono);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.wabtn{display:block;text-align:center;text-decoration:none;background:var(--ok);color:var(--ok-ink);font:600 .88rem/1 var(--font-body);letter-spacing:.04em;text-transform:uppercase;border-radius:9px;padding:16px 12px}
+.wanote{font:500 .76rem var(--font-body);color:var(--warn);text-align:center;margin:0}
+.empty{max-width:420px;margin:0 auto;text-align:center;color:var(--ink-soft);padding:40px 0;font-size:.95rem}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:50;
+  background:var(--ink);color:var(--paper);border-radius:999px;
+  padding:9px 18px;font:600 .8rem var(--font-body);
+  opacity:0;transition:opacity .2s ease;pointer-events:none;
+}
+.toast.show{opacity:1}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+@media (max-width:380px){
+  .flds input{width:52px}
+  .nm .t{font-size:.9rem}
+}
+</style>
+
+<header class="bar gut">
+  <div class="bar-top">
+    <h1>Conteo <span>Los Chitos</span></h1>
+    <div class="modes" role="group" aria-label="Modo">
+      <button type="button" id="m-conteo" aria-pressed="true">Conteo</button>
+      <button type="button" id="m-config" aria-pressed="false">Pares</button>
+    </div>
+  </div>
+  <div class="meta">
+    <label><span>Fecha</span><input type="date" id="fecha"></label>
+    <label><span>Ciclo</span><select id="ciclo"><option>Jueves</option><option>Domingo</option><option>Extra</option></select></label>
+    <label><span>Quién contó</span><input type="text" id="quien" placeholder="Nombre" autocomplete="name"></label>
+  </div>
+  <div class="progress">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="pstat">
+      <span id="p-rev">0 de 116 revisados</span>
+      <span><b id="p-ped">0</b> por pedir</span>
+    </div>
+  </div>
+</header>
+
+<main class="gut">
+  <div class="tools">
+    <input type="search" id="buscar" placeholder="Buscar producto…" autocomplete="off">
+    <button type="button" class="tbtn" id="toggle-all">Abrir</button>
+  </div>
+  <p class="hint" id="hint">
+    <b>Cómo se usa:</b> recorre cada proveedor y anota en <b>Hay</b> lo que encuentres en bodega.
+    Donde esté definido el Max, el <b>Pedir</b> se calcula solo; si no, escríbelo a mano.
+    Al terminar, pulsa <b>Generar pedido</b> y envía el texto por WhatsApp.
+  </p>
+  <div id="lista"></div>
+</main>
+
+<div class="actions">
+  <button type="button" class="btn main" id="generar">Generar pedido</button>
+  <button type="button" class="btn" id="limpiar">Limpiar</button>
+</div>
+
+<div class="sheet gut" id="sheet" hidden>
+  <div class="sheet-top">
+    <h2 id="sheet-title">Pedido</h2>
+    <button type="button" class="btn" id="cerrar">Cerrar</button>
+  </div>
+  <div class="opts" id="opts">
+    <label><input type="checkbox" id="op-hay"> Incluir existencia (hay)</label>
+    <label><input type="checkbox" id="op-bajo" checked> Marcar los que están bajo mínimo</label>
+    <label class="wa">Enviar a <input type="tel" id="wa-num" inputmode="numeric" placeholder="10 dígitos" autocomplete="tel"></label>
+  </div>
+  <div id="sheet-body"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============ Catálogo ============
+   Fuente: Compras_materia_prima_3.xlsx. min/max/unidad vacíos donde todavía no
+   están definidos; se editan en el modo "Pares" y se guardan en este teléfono. */
+var MODO_PROV = {
+  "La Bodeguita":"pedido","Aurrera":"directa","Coca Cola":"pedido","La Chula":"pedido",
+  "La Villita":"pedido","Toyo":"pedido","Carnicería":"pedido","Mercado":"directa",
+  "Hielera":"directa","Frutería":"directa","Mercado Libre":"pedido","Limpieza":"directa",
+  "Diversos":"directa","Sams":"directa","Prov. Helado":"pedido","Panadería":"directa",
+  "Tortillería":"directa","Borse":"pedido","Plasticun":"pedido"
+};
+var CAT = [
+ ["La Bodeguita","Azúcar"],["La Bodeguita","Bolsa baño"],["La Bodeguita","Bolsa basura"],
+ ["La Bodeguita","Contenedor 8x8"],["La Bodeguita","Consomé de pollo"],["La Bodeguita","Crema"],
+ ["La Bodeguita","Cucharas medianas"],["La Bodeguita","Cucharas nieve"],["La Bodeguita","Cuchillo desechable"],
+ ["La Bodeguita","Hamburguesero"],["La Bodeguita","Orégano"],["La Bodeguita","Rollo bolsa 1 kg"],
+ ["La Bodeguita","Rollo bolsa 2 kg"],["La Bodeguita","Rollo bolsa insertos"],["La Bodeguita","Sal"],
+ ["La Bodeguita","Tenedores"],["La Bodeguita","Tapas vaso 1 oz"],["La Bodeguita","Tapas vaso 8 oz"],
+ ["La Bodeguita","Vasos 1 oz"],["La Bodeguita","Vasos 8 oz salsa"],["La Bodeguita","Vasos 16 oz"],
+ ["Aurrera","Aromatizante"],["Aurrera","Aromatizante spray"],["Aurrera","Consomé de tomate"],
+ ["Aurrera","Jugo de piña Jumex"],["Aurrera","Jugo de naranja Del Valle"],
+ ["Coca Cola","Refresco Coca"],
+ ["La Chula","Bebida horchata"],["La Chula","Bebida jamaica"],
+ ["La Villita","Queso"],
+ ["Toyo","Ajinomoto"],["Toyo","Popotes tapioca"],["Toyo","Salsa soya"],["Toyo","Tapas vaso 2 oz"],["Toyo","Vasos 2 oz"],
+ ["Carnicería","Carne bistec de res"],["Carnicería","Carne espaldilla de cerdo"],
+ ["Mercado","Manteca de cerdo"],["Mercado","Ácido cítrico"],["Mercado","Benzoato de sodio"],
+ ["Mercado","Chispas de chocolate"],["Mercado","Chococrispis"],["Mercado","Chocolate líquido"],
+ ["Mercado","Comino"],["Mercado","Crayones"],["Mercado","Galletas de chocolate"],
+ ["Mercado","Pasta de achiote"],["Mercado","Peps botella 1/2 lt"],
+ ["Hielera","Hielo"],
+ ["Frutería","Ajo"],["Frutería","Calabacita"],["Frutería","Cebolla blanca"],["Frutería","Cebolla morada"],
+ ["Frutería","Chile de árbol"],["Frutería","Chile guajillo"],["Frutería","Chile poblano"],
+ ["Frutería","Chile serrano"],["Frutería","Cilantro"],["Frutería","Limón"],["Frutería","Naranja"],
+ ["Frutería","Pepino"],["Frutería","Tomate"],["Frutería","Tomatillo verde"],
+ ["Mercado Libre","Aromatizante automático 250 ml"],["Mercado Libre","Eliminador de olores mingitorio"],
+ ["Mercado Libre","Limón concentrado"],["Mercado Libre","Lubricante NSF H1"],
+ ["Mercado Libre","Rollo Kimberly Clark 90509 200 m"],["Mercado Libre","Tapete antisalpicadura WISE"],
+ ["Mercado Libre","Vitafilm"],
+ ["Limpieza","Cloro"],["Limpieza","Desengrasante"],["Limpieza","Fabuloso"],["Limpieza","Guantes"],
+ ["Limpieza","Jabón loza"],["Limpieza","Jabón manos"],["Limpieza","Jalador"],["Limpieza","Escoba"],
+ ["Limpieza","Fibra lavatrastes"],["Limpieza","Fibra metálica"],["Limpieza","Pinol"],
+ ["Limpieza","Recogedor"],["Limpieza","Trapeador"],
+ ["Diversos","Rollo impresora 80 mm"],["Diversos","Rollos Inbursa"],["Diversos","Tinta impresora láser"],
+ ["Sams","Aceite"],["Sams","Agua embotellada 500 ml"],["Sams","Café"],["Sams","Chocolates Hershey"],
+ ["Sams","Crema batida"],["Sams","Fresa congelada"],["Sams","Jugo de arándano"],["Sams","Maggi"],
+ ["Sams","Papel de baño"],["Sams","Pimienta"],["Sams","Queso amarillo"],["Sams","Sal con ajo"],
+ ["Sams","Salsa inglesa"],["Sams","Sanita"],["Sams","Servilleta Liz"],["Sams","Servitoallas"],
+ ["Sams","Sobre de azúcar"],["Sams","Sobre de Svetia"],["Sams","Vinagre"],["Sams","Windex"],
+ ["Prov. Helado","Base helado de chocolate"],["Prov. Helado","Base helado de vainilla"],
+ ["Prov. Helado","Cono helado"],["Prov. Helado","Vaso helado 4 oz"],["Prov. Helado","Vaso helado 8 oz"],
+ ["Panadería","Telera"],
+ ["Tortillería","Tortillas de harina"],["Tortillería","Tortillas de maíz"],
+ ["Borse","Bolsa camiseta mediana"],
+ ["Plasticun","Papel alimenticio 20x30 cm"]
+];
+
+var K_PARES="chitos.pares.v1", K_CONTEO="chitos.conteo.v1", K_QUIEN="chitos.quien.v1", K_WA="chitos.wa.v1";
+
+function load(k,def){try{var v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+var pares = load(K_PARES,{});   // id -> {u,min,max}
+var conteo = load(K_CONTEO,{}); // id -> {hay,pedir}
+
+var items = CAT.map(function(r,i){
+  var id = "i"+i;
+  var p = pares[id] || {};
+  return {id:id, prov:r[0], nom:r[1], u:p.u||"", min:p.min, max:p.max};
+});
+var provs = [];
+items.forEach(function(it){ if(provs.indexOf(it.prov)<0) provs.push(it.prov) });
+
+/* ---------- Render ---------- */
+var lista = document.getElementById("lista");
+var html = "";
+provs.forEach(function(prov,pi){
+  var modo = MODO_PROV[prov]||"directa";
+  var mine = items.filter(function(it){return it.prov===prov});
+  html += '<section class="prov'+(pi<2?" open":"")+'" data-prov="'+prov+'">'
+    + '<button type="button" class="phead">'
+    + '<span class="caret"></span>'
+    + '<h2>'+prov+'</h2>'
+    + '<span class="tag '+modo+'">'+(modo==="pedido"?"Pedido":"Compra")+'</span>'
+    + '<span class="cnt" data-cnt>0/'+mine.length+'</span>'
+    + '</button><div class="rows">';
+  mine.forEach(function(it){
+    html += '<div class="row" data-id="'+it.id+'" data-nom="'+it.nom.toLowerCase()+'">'
+      + '<div class="nm"><div class="t">'+it.nom+'</div>'
+      + '<div class="s" data-sub></div></div>'
+      + '<div class="flds cnt-f">'
+        + '<label class="fld"><span>Hay</span><input type="number" inputmode="decimal" step="any" min="0" id="hay-'+it.id+'" data-f="hay" placeholder="–"></label>'
+        + '<label class="fld"><span>Pedir</span><input type="number" inputmode="decimal" step="any" min="0" class="pedir" id="ped-'+it.id+'" data-f="pedir" placeholder="–"></label>'
+      + '</div>'
+      + '<div class="flds cfg-f">'
+        + '<label class="fld"><span>Unidad</span><input type="text" class="u" id="u-'+it.id+'" data-f="u" placeholder="kg"></label>'
+        + '<label class="fld"><span>Min</span><input type="number" inputmode="decimal" step="any" min="0" id="min-'+it.id+'" data-f="min" placeholder="–"></label>'
+        + '<label class="fld"><span>Max</span><input type="number" inputmode="decimal" step="any" min="0" id="max-'+it.id+'" data-f="max" placeholder="–"></label>'
+      + '</div></div>';
+  });
+  html += '</div></section>';
+});
+lista.innerHTML = html;
+
+var byId = {};
+items.forEach(function(it){ byId[it.id]=it });
+
+function num(v){ if(v===""||v===null||v===undefined) return null; var n=parseFloat(v); return isFinite(n)?n:null }
+
+function sub(it){
+  var bits = [];
+  if(it.u) bits.push(it.u);
+  if(it.min!=null||it.max!=null) bits.push("min "+(it.min!=null?it.min:"–")+" · max "+(it.max!=null?it.max:"–"));
+  else bits.push("<em>sin par definido</em>");
+  return bits.join("  ·  ");
+}
+
+function pinta(){
+  var rev=0, ped=0;
+  items.forEach(function(it){
+    var row = lista.querySelector('[data-id="'+it.id+'"]');
+    row.querySelector("[data-sub]").innerHTML = sub(it);
+    var c = conteo[it.id]||{};
+    var hay = num(c.hay), pe = num(c.pedir);
+    row.querySelector('[data-f="hay"]').value = c.hay!=null?c.hay:"";
+    row.querySelector('[data-f="pedir"]').value = c.pedir!=null?c.pedir:"";
+    row.querySelector('[data-f="u"]').value = it.u||"";
+    row.querySelector('[data-f="min"]').value = it.min!=null?it.min:"";
+    row.querySelector('[data-f="max"]').value = it.max!=null?it.max:"";
+    var bajo = hay!=null && it.min!=null && hay<=it.min;
+    row.classList.toggle("bajo", bajo);
+    if(hay!=null||pe!=null) rev++;
+    if(pe!=null&&pe>0) ped++;
+  });
+  provs.forEach(function(prov){
+    var sec = lista.querySelector('[data-prov="'+prov+'"]');
+    var mine = items.filter(function(it){return it.prov===prov});
+    var n = mine.filter(function(it){var c=conteo[it.id]||{};return num(c.hay)!=null||num(c.pedir)!=null}).length;
+    var el = sec.querySelector("[data-cnt]");
+    el.textContent = n+"/"+mine.length;
+    el.classList.toggle("has", n>0);
+  });
+  document.getElementById("p-rev").textContent = rev+" de "+items.length+" revisados";
+  document.getElementById("p-ped").textContent = ped;
+  document.getElementById("fill").style.width = (items.length?Math.round(rev/items.length*100):0)+"%";
+  document.getElementById("generar").disabled = ped===0;
+}
+
+/* ---------- Entradas ---------- */
+lista.addEventListener("input", function(e){
+  var inp = e.target.closest("input"); if(!inp) return;
+  var row = e.target.closest(".row"); if(!row) return;
+  var id = row.getAttribute("data-id"), f = inp.getAttribute("data-f"), it = byId[id];
+  if(f==="hay"||f==="pedir"){
+    conteo[id] = conteo[id]||{};
+    conteo[id][f] = inp.value===""?null:inp.value;
+    if(f==="hay"){
+      var hay = num(inp.value);
+      if(it.max!=null && hay!=null){
+        var sug = Math.max(0, Math.round((it.max-hay)*100)/100);
+        conteo[id].pedir = String(sug);
+        row.querySelector('[data-f="pedir"]').value = sug;
+      }
+      var bajo = hay!=null && it.min!=null && hay<=it.min;
+      row.classList.toggle("bajo", bajo);
+    }
+    save(K_CONTEO, conteo);
+  } else {
+    if(f==="u") it.u = inp.value.trim();
+    else it[f] = num(inp.value);
+    pares[id] = {u:it.u, min:it.min, max:it.max};
+    save(K_PARES, pares);
+    row.querySelector("[data-sub]").innerHTML = sub(it);
+  }
+  actualizaTotales();
+});
+
+function actualizaTotales(){
+  var rev=0, ped=0;
+  items.forEach(function(it){
+    var c=conteo[it.id]||{};
+    if(num(c.hay)!=null||num(c.pedir)!=null) rev++;
+    if(num(c.pedir)!=null&&num(c.pedir)>0) ped++;
+  });
+  provs.forEach(function(prov){
+    var sec = lista.querySelector('[data-prov="'+prov+'"]');
+    var mine = items.filter(function(it){return it.prov===prov});
+    var n = mine.filter(function(it){var c=conteo[it.id]||{};return num(c.hay)!=null||num(c.pedir)!=null}).length;
+    var el = sec.querySelector("[data-cnt]");
+    el.textContent = n+"/"+mine.length;
+    el.classList.toggle("has", n>0);
+  });
+  document.getElementById("p-rev").textContent = rev+" de "+items.length+" revisados";
+  document.getElementById("p-ped").textContent = ped;
+  document.getElementById("fill").style.width = (items.length?Math.round(rev/items.length*100):0)+"%";
+  document.getElementById("generar").disabled = ped===0;
+}
+
+/* ---------- Plegar / buscar / modo ---------- */
+lista.addEventListener("click", function(e){
+  var h = e.target.closest(".phead"); if(!h) return;
+  h.parentElement.classList.toggle("open");
+});
+document.getElementById("toggle-all").addEventListener("click", function(){
+  var secs = lista.querySelectorAll(".prov");
+  var abrir = this.textContent.trim()==="Abrir";
+  for(var i=0;i<secs.length;i++) secs[i].classList.toggle("open", abrir);
+  this.textContent = abrir?"Cerrar":"Abrir";
+});
+document.getElementById("buscar").addEventListener("input", function(){
+  var q = this.value.trim().toLowerCase();
+  var secs = lista.querySelectorAll(".prov");
+  for(var i=0;i<secs.length;i++){
+    var rows = secs[i].querySelectorAll(".row"), vis=0;
+    for(var j=0;j<rows.length;j++){
+      var ok = !q || rows[j].getAttribute("data-nom").indexOf(q)>=0
+            || secs[i].getAttribute("data-prov").toLowerCase().indexOf(q)>=0;
+      rows[j].hidden = !ok; if(ok) vis++;
+    }
+    secs[i].hidden = q && vis===0;
+    if(q && vis) secs[i].classList.add("open");
+  }
+});
+var mc=document.getElementById("m-conteo"), mp=document.getElementById("m-config");
+function modo(cfg){
+  document.body.classList.toggle("cfg", cfg);
+  mc.setAttribute("aria-pressed", String(!cfg));
+  mp.setAttribute("aria-pressed", String(cfg));
+  document.getElementById("hint").innerHTML = cfg
+    ? '<b>Pares de inventario:</b> define la <b>unidad de compra</b>, el <b>Min</b> (existencia mínima antes de que peligre el servicio) y el <b>Max</b> (lo que debe haber al terminar el pedido). Con el Max definido, la cantidad a pedir se calcula sola en cada conteo. Se guardan en este teléfono.'
+    : '<b>Cómo se usa:</b> recorre cada proveedor y anota en <b>Hay</b> lo que encuentres en bodega. Donde esté definido el Max, el <b>Pedir</b> se calcula solo; si no, escríbelo a mano. Al terminar, pulsa <b>Generar pedido</b> y envía el texto por WhatsApp.';
+  document.getElementById("generar").textContent = cfg?"Exportar pares":"Generar pedido";
+  document.getElementById("generar").disabled = cfg?false:document.getElementById("p-ped").textContent==="0";
+}
+mc.addEventListener("click",function(){modo(false)});
+mp.addEventListener("click",function(){modo(true)});
+
+/* ---------- Fecha, ciclo, quién ---------- */
+var hoy = new Date();
+var fechaEl = document.getElementById("fecha");
+fechaEl.value = hoy.getFullYear()+"-"+String(hoy.getMonth()+1).padStart(2,"0")+"-"+String(hoy.getDate()).padStart(2,"0");
+var cicloEl = document.getElementById("ciclo");
+cicloEl.value = hoy.getDay()===4?"Jueves":(hoy.getDay()===0?"Domingo":"Extra");
+var quienEl = document.getElementById("quien");
+quienEl.value = load(K_QUIEN,"")||"";
+quienEl.addEventListener("input",function(){save(K_QUIEN,this.value)});
+
+var MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function fechaTxt(){
+  var p=fechaEl.value.split("-");
+  if(p.length!==3) return "";
+  return parseInt(p[2],10)+" "+MES[parseInt(p[1],10)-1]+" "+p[0];
+}
+
+/* ---------- Salida ---------- */
+function pedidos(){
+  var out = [];
+  provs.forEach(function(prov){
+    var mine = items.filter(function(it){
+      var c=conteo[it.id]||{}; var pe=num(c.pedir); return pe!=null&&pe>0;
+    }).filter(function(it){return it.prov===prov});
+    if(mine.length) out.push({prov:prov, modo:MODO_PROV[prov]||"directa", items:mine});
+  });
+  return out;
+}
+function lineaItem(it, conHay, marcar){
+  var c = conteo[it.id]||{};
+  var s = "• "+it.nom+" — "+num(c.pedir)+(it.u?" "+it.u:"");
+  if(conHay && num(c.hay)!=null) s += " (hay "+num(c.hay)+")";
+  if(marcar && num(c.hay)!=null && it.min!=null && num(c.hay)<=it.min) s += " ⚠";
+  return s;
+}
+function textoProv(g, conHay, marcar){
+  var l = ["*"+g.prov.toUpperCase()+"*"];
+  g.items.forEach(function(it){ l.push(lineaItem(it, conHay, marcar)) });
+  return l.join("\n");
+}
+function textoTodo(conHay, marcar){
+  var gs = pedidos();
+  var head = "*LOS CHITOS — PEDIDO*\n"+fechaTxt()+" · "+cicloEl.value
+           + (quienEl.value.trim()?" · contó "+quienEl.value.trim():"");
+  var ped = gs.filter(function(g){return g.modo==="pedido"});
+  var dir = gs.filter(function(g){return g.modo==="directa"});
+  var parts = [head];
+  if(ped.length){
+    parts.push("———— PEDIR A PROVEEDOR ————");
+    ped.forEach(function(g){ parts.push(textoProv(g, conHay, marcar)) });
+  }
+  if(dir.length){
+    parts.push("———— COMPRA DIRECTA ————");
+    dir.forEach(function(g){ parts.push(textoProv(g, conHay, marcar)) });
+  }
+  var n = gs.reduce(function(a,g){return a+g.items.length},0);
+  parts.push("Total: "+n+" productos en "+gs.length+" proveedores");
+  return parts.join("\n\n");
+}
+function textoPares(){
+  var l = ["LOS CHITOS — PARES DE INVENTARIO ("+fechaTxt()+")","proveedor | producto | unidad | min | max"];
+  items.forEach(function(it){
+    if(!it.u && it.min==null && it.max==null) return;
+    l.push(it.prov+" | "+it.nom+" | "+(it.u||"")+" | "+(it.min!=null?it.min:"")+" | "+(it.max!=null?it.max:""));
+  });
+  if(l.length===2) l.push("(todavía no hay pares definidos)");
+  return l.join("\n");
+}
+
+var sheet=document.getElementById("sheet"), sheetBody=document.getElementById("sheet-body"),
+    sheetTitle=document.getElementById("sheet-title"), opts=document.getElementById("opts");
+
+function render(){
+  var cfg = document.body.classList.contains("cfg");
+  if(cfg){
+    sheetTitle.textContent="Pares de inventario";
+    opts.hidden = true;
+    var t = textoPares();
+    sheetBody.innerHTML = '<div class="ticket" id="tk"></div>'
+      + '<div class="copies"><div class="copyrow"><span class="n">Configuración completa</span>'
+      + '<button type="button" class="mini" data-copy="all">Copiar</button></div></div>';
+    document.getElementById("tk").textContent = t;
+    sheetBody.querySelector('[data-copy="all"]')._txt = t;
+    return;
+  }
+  sheetTitle.textContent="Pedido";
+  opts.hidden = false;
+  var conHay=document.getElementById("op-hay").checked, marcar=document.getElementById("op-bajo").checked;
+  var gs = pedidos();
+  if(!gs.length){ sheetBody.innerHTML='<p class="empty">Todavía no hay nada por pedir. Anota las cantidades en la columna <b>Pedir</b>.</p>'; return }
+  var todo = textoTodo(conHay, marcar);
+  var nprod = gs.reduce(function(a,g){return a+g.items.length},0);
+  var h = '<div class="ticket" id="tk"></div><div class="copies">'
+        + '<a class="wabtn" id="wabtn" href="#" target="_blank" rel="noopener">Enviar por WhatsApp</a>'
+        + '<p class="wanote" id="wanote" hidden>El pedido es largo: si WhatsApp lo corta, envíalo por proveedor con los botones de abajo.</p>'
+        + '<div class="copyrow"><span class="n">Pedido completo</span>'
+        + '<span class="q">'+nprod+' prod.</span>'
+        + '<button type="button" class="mini" data-k="-1">Copiar</button></div>';
+  gs.forEach(function(g,i){
+    h += '<div class="copyrow"><span class="n">'+g.prov+'</span>'
+       + '<span class="q">'+g.items.length+'</span>'
+       + '<button type="button" class="mini ghost" data-k="'+i+'">Copiar</button></div>';
+  });
+  h += '</div>';
+  sheetBody.innerHTML = h;
+  document.getElementById("tk").textContent = todo;
+  sheetBody.querySelector('[data-k="-1"]')._txt = todo;
+  gs.forEach(function(g,i){ sheetBody.querySelector('[data-k="'+i+'"]')._txt = textoProv(g, conHay, marcar) });
+
+  var wn = (document.getElementById("wa-num").value||"").replace(/\D/g,"");
+  var wb = document.getElementById("wabtn");
+  if(wn.length>=10){
+    wb.href = "https://wa.me/52"+wn.slice(-10)+"?text="+encodeURIComponent(todo);
+    wb.textContent = "Enviar por WhatsApp";
+  } else {
+    wb.href = "https://api.whatsapp.com/send?text="+encodeURIComponent(todo);
+    wb.textContent = "Enviar por WhatsApp (elegir chat)";
+  }
+  document.getElementById("wanote").hidden = todo.length <= 1500;
+}
+
+var toast=document.getElementById("toast"), tt;
+function aviso(m){ toast.textContent=m; toast.classList.add("show"); clearTimeout(tt); tt=setTimeout(function(){toast.classList.remove("show")},1700) }
+function copia(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){aviso("Copiado")},function(){selecciona()});
+  } else selecciona();
+  function selecciona(){
+    var tk=document.getElementById("tk");
+    if(tk){ var r=document.createRange(); r.selectNodeContents(tk);
+      var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }
+    aviso("Selecciona y copia a mano");
+  }
+}
+sheetBody.addEventListener("click", function(e){
+  var b=e.target.closest(".mini"); if(!b) return; copia(b._txt||"");
+});
+var waEl = document.getElementById("wa-num");
+waEl.value = load(K_WA,"")||"";
+waEl.addEventListener("input", function(){ save(K_WA, this.value); render() });
+opts.addEventListener("change", render);
+document.getElementById("generar").addEventListener("click", function(){ render(); sheet.hidden=false; document.body.style.overflow="hidden" });
+document.getElementById("cerrar").addEventListener("click", function(){ sheet.hidden=true; document.body.style.overflow="" });
+document.getElementById("limpiar").addEventListener("click", function(){
+  var b=this;
+  if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="¿Seguro?";
+    setTimeout(function(){b.dataset.armed="";b.textContent="Limpiar"},3500); return }
+  b.dataset.armed=""; b.textContent="Limpiar";
+  conteo={}; save(K_CONTEO,conteo); pinta(); aviso("Conteo en blanco");
+});
+
+pinta();
+</script>
+
+</body>
+</html>
